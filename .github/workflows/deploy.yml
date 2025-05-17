@@ -25,7 +25,9 @@ jobs:
           pip install -r requirements.txt --no-deps
 
       - name: Build BentoML Service
-        run: bentoml build
+        run: |
+          ls -la
+          bentoml build
 
       - name: Test
         run: |
