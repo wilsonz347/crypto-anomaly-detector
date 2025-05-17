@@ -33,6 +33,14 @@ This project performs anomaly detection on Bitcoin prices using machine learning
 
 ---
 
+## Dataset
+
+The cryptocurrency price history dataset used in this project is available on Kaggle:
+
+[Cryptocurrency Price History by Sudalai Rajkumar](https://www.kaggle.com/datasets/sudalairajkumar/cryptocurrencypricehistory)
+
+---
+
 ## How to Use
 
 1. Clone the repository  
