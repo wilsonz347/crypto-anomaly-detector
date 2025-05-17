@@ -3,6 +3,7 @@
 import bentoml
 from bentoml.io import JSON
 import pandas as pd 
+import numpy as np
 
 scaler = bentoml.sklearn.get("scaler:latest").to_runner()
 model = bentoml.sklearn.get("anomaly_model:latest").to_runner()
