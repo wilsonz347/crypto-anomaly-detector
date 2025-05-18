@@ -5,9 +5,9 @@ from bentoml.io import JSON
 import pandas as pd 
 import numpy as np
 
-scaler = bentoml.sklearn.get("scaler:latest").to_runner()
+scaler = bentoml.sklearn.load_model("scaler:latest")
 model = bentoml.sklearn.get("anomaly_model:latest").to_runner()
-service = bentoml.Service("crypto_anomaly_detection", runners=[model, scaler])
+service = bentoml.Service("crypto_anomaly_detection", runners=[model])
 
 # Feature columns
 FEATURE_COLUMNS = [
@@ -38,7 +38,8 @@ async def predict(input_data):
     features = df[FEATURE_COLUMNS]
     
     # Scale & make prediction
-    scaled_features = await scaler.async_run(features)
+    scaled_features = scaler.transform(features)
+    
     prediction = await model.async_run(scaled_features)
     
     # Map prediction (-1: anomaly, 1: normal) to boolean
