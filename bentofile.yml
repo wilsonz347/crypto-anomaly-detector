@@ -11,4 +11,4 @@ include:
   - requirements.txt
 
 python:
-  requirements_txt: requirements.txt
+  requirements_txt: requirements_txt
