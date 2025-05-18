@@ -19,6 +19,7 @@ FEATURE_COLUMNS = [
 # Initialize API & make prediction
 @service.api(input=JSON(), output=JSON()) 
 async def predict(input_data):
+  try:
     df = pd.DataFrame([input_data])
     df = df.dropna().drop_duplicates()
     
@@ -44,3 +45,6 @@ async def predict(input_data):
     anomaly_flags = [bool(p == -1) for p in prediction]
     
     return {"anomaly": anomaly_flags[0]}
+  
+  except Exception as e:
+    return {"error": str(e)}
