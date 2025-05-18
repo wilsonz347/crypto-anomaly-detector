@@ -38,8 +38,8 @@ async def predict(input_data):
     features = df[FEATURE_COLUMNS]
     
     # Scale & make prediction
-    scaled_features = await scaler.run(features)
-    prediction = await model.run(scaled_features)
+    scaled_features = await scaler.async_run(features)
+    prediction = await model.async_run(scaled_features)
     
     # Map prediction (-1: anomaly, 1: normal) to boolean
     anomaly_flags = [bool(p == -1) for p in prediction]
