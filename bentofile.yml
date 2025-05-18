@@ -1,4 +1,3 @@
-# Configs for BentoML
 service: src.service:service
 
 name: crypto_anomaly_detection
