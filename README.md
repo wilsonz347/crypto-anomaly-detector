@@ -55,8 +55,8 @@ The cryptocurrency price history dataset used in this project is available on Ka
 ## CI/CD Pipeline
 
 - Installs dependencies  
-- Builds BentoML service  
-- (Optional) Runs tests  
+- Builds & Serve BentoML service  
+- Latency Test  
 - (Optional) Deploys to a cloud service  
 
 Check the **Actions** tab in this repository for pipeline run status and logs.
