@@ -49,9 +49,16 @@ jobs:
           cat bentofile.yaml
           bentoml build
 
-      - name: Test
+      - name: Start BentoML Service
         run: |
-          echo "Unit testing is currently empty; will be added later"
+          bentoml serve crypto_anomaly_detection:latest --port 3000 &
+          timeout 30s bash -c "until curl -s http://localhost:3000/health > /dev/null; do sleep 1; echo 'Waiting for service...'; done"
+          echo "BentoML service is up"
+
+      - name: Latency test
+        working-directory: ./tests
+        run: |
+          python latency_test.py
 
       - name: Deploy to cloud service
         run: | 
