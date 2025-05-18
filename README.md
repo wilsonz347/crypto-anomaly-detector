@@ -63,12 +63,6 @@ Check the **Actions** tab in this repository for pipeline run status and logs.
 
 ---
 
-## License
-
-MIT License
-
----
-
 ## Use of AI Assistance
 
 This project leveraged advanced AI language models, including OpenAI's ChatGPT and Anthropic's Claude, to streamline several key aspects of development, such as:
@@ -78,3 +72,9 @@ This project leveraged advanced AI language models, including OpenAI's ChatGPT a
 - **Documentation:** Creation and refinement of technical documentation and comments.
 
 The integration of AI tools helped accelerate the development process, improve code quality, and ensure thorough, clear communication throughout the project lifecycle.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
