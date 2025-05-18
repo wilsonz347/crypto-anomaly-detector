@@ -28,7 +28,7 @@ jobs:
         working-directory: .
         run: |
           ls -la
-          cat bentofile.yml
+          cat bentofile.yaml
           bentoml build
 
       - name: Test
