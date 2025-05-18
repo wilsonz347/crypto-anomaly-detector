@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto Anomaly Detection Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 900px;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    pre {
+      background-color: #f4f4f4;
+      border-left: 4px solid #3498db;
+      padding: 10px;
+      overflow-x: auto;
+    }
+    section {
+      margin-bottom: 40px;
+    }
+    code {
+      font-family: Consolas, monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cryptocurrency Data Anomaly Detection Report</h1>
+  <p>This report summarizes key challenges in analyzing cryptocurrency price and volume data, the code approaches used to address them, and the anomaly detection pipeline.</p>
+
+  <section>
+    <h2>1. Problem: Skewed Distributions in Price and Volume Data</h2>
+    <p>Cryptocurrency price and volume features typically exhibit highly skewed distributions, making analysis and modeling difficult.</p>
+    <h3>Solution: Visualize and quantify skewness, then apply log transformation</h3>
+    <pre><code>from scipy.stats import skew
+import matplotlib.pyplot as plt
+
+cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Marketcap']
+
+for col in cols:
+    plt.figure(figsize=(6, 4))
+    skew_value = skew(df[col])
+    plt.hist(df[col], bins=30)
+    plt.title(f'{col} Distribution\nSkewness: {skew_value:.2f}')
+    plt.xlabel(col)
+    plt.ylabel('Frequency')
+    plt.grid(True)
+    plt.show()
+
+# Log transformation
+import numpy as np
+for col in cols:
+    df[f'{col}_log'] = np.log(df[col])</code></pre>
+  </section>
+
+  <section>
+    <h2>2. Problem: Correlations and Feature Relationships are Hard to Interpret on Raw Scale</h2>
+    <p>Raw features can have non-linear relationships and variances that obscure correlations.</p>
+    <h3>Solution: Use log-transformed features and visualize correlation heatmap</h3>
+    <pre><code>import seaborn as sns
+import matplotlib.pyplot as plt
+
+cols_log = ['High_log', 'Low_log', 'Open_log', 'Close_log', 'Volume_log', 'Marketcap_log']
+
+corr = df[cols_log].corr()
+
+plt.figure(figsize=(8,6))
+sns.heatmap(corr, annot=True, cmap='coolwarm')
+plt.title('Correlation Heatmap (Log Transformed)')
+plt.show()</code></pre>
+  </section>
+
+  <section>
+    <h2>3. Problem: Detecting Anomalies in Time Series Cryptocurrency Data</h2>
+    <p>Price and volume exhibit occasional spikes and drops due to market volatility. Detecting these anomalies requires a systematic approach.</p>
+    <h3>Solution: Rolling z-score anomaly detection with visualization</h3>
+    <pre><code>import matplotlib.dates as mdates
+
+def detect_and_plot_anomalies(df, column, window=30, threshold=3):
+    rolling_mean = df[column].rolling(window=window).mean()
+    rolling_std = df[column].rolling(window=window).std()
+
+    df[f'{column}_zscore'] = (df[column] - rolling_mean) / rolling_std
+    df[f'{column}_anomaly'] = df[f'{column}_zscore'].abs() > threshold
+
+    plt.figure(figsize=(14,6))
+    plt.plot(df['Date'], df[column], label=column)
+    plt.scatter(df[df[f'{column}_anomaly']]['Date'], df[df[f'{column}_anomaly']][column], color='red', label='Anomaly')
+    plt.gca().xaxis.set_major_locator(mdates.YearLocator())
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    plt.legend()
+    plt.title(f'{column} with Anomalies (Rolling Z-Score)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+    return df
+
+for col in cols:
+    df = detect_and_plot_anomalies(df, col, window=30, threshold=3)</code></pre>
+  </section>
+
+  <section>
+    <h2>4. Problem: Building a Robust Anomaly Detection Model</h2>
+    <p>Manual thresholding and simple anomaly detection methods have limitations in precision and recall. Machine learning models can improve detection.</p>
+    <h3>Solution: Train Isolation Forest on scaled log-transformed and engineered features</h3>
+    <pre><code>from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+import joblib
+
+features = [
+  "High_log", "Low_log", "Open_log", "Close_log", 
+  "Volume_log", "Marketcap_log", 
+  "log_return", "log_high_low_spread", "log_close_open_return"
+]
+
+# Normalize features
+scaler = StandardScaler()
+feature_scaled = scaler.fit_transform(data[features])
+
+# Train Isolation Forest (contamination=1%)
+iso_forest = IsolationForest(contamination=0.01, random_state=100)
+iso_forest.fit(feature_scaled)
+
+# Predict anomalies (-1 = anomaly, 1 = normal)
+data['isolation_anomaly'] = iso_forest.predict(feature_scaled)
+data['isolation_anomaly'] = data['isolation_anomaly'].map({1: False, -1: True})
+
+# Save model and scaler for deployment
+joblib.dump(scaler, '../models/scaler.pkl')
+joblib.dump(iso_forest, '../models/anomaly_detection.pkl')</code></pre>
+  </section>
+
+  <section>
+    <h2>5. Problem: Serving the Anomaly Detection Model as a Real-Time API</h2>
+    <p>To enable real-time predictions on incoming cryptocurrency data, the model must be served efficiently.</p>
+    <h3>Solution: BentoML service wrapping model & scaler with async API</h3>
+    <pre><code>import bentoml
+from bentoml.io import JSON
+import pandas as pd 
+import numpy as np
+
+scaler = bentoml.sklearn.get("scaler:latest").to_runner()
+model = bentoml.sklearn.get("anomaly_model:latest").to_runner()
+service = bentoml.Service("crypto_anomaly_detection", runners=[model, scaler])
+
+FEATURE_COLUMNS = [
+  "High_log", "Low_log", "Open_log", "Close_log", 
+  "Volume_log", "Marketcap_log", 
+  "log_return", "log_high_low_spread", "log_close_open_return"
+]
+
+@service.api(input=JSON(), output=JSON())
+async def predict(input_data):
+    df = pd.DataFrame([input_data]).dropna().drop_duplicates()
+    cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Marketcap']
+    epsilon = 1e-9  # avoid log(0)
+    for col in cols:
+        df[f"{col}_log"] = np.log(df[col] + epsilon)
+    df['log_return'] = df['Close_log'] - df['Open_log']
+    df['log_high_low_spread'] = df['High_log'] - df['Low_log']
+    df['log_close_open_return'] = df['Close_log'] - df['Open_log']
+    features = df[FEATURE_COLUMNS]
+    scaled_features = await scaler.run(features)
+    prediction = await model.run(scaled_features)
+    anomaly_flags = [bool(p == -1) for p in prediction]
+    return {"anomaly": anomaly_flags[0]}</code></pre>
+  </section>
+
+  <section>
+    <h2>6. CI/CD Automation for Model Deployment</h2>
+    <p>To streamline updates and deployments, a GitHub Actions pipeline automates the build and deployment process.</p>
+    <h3>Key highlights from the GitHub Actions workflow:</h3>
+    <pre><code>name: BentoML CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install bentoml
+          pip install -r requirements.txt --no-deps
+
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Download model files from S3
+        run: |
+          mkdir -p models
+          aws s3 cp s3://anomaly-detection-pkl/scaler.pkl models/scaler.pkl
+          aws s3 cp s3://anomaly-detection-pkl/anomaly_detection.pkl models/anomaly_detection.pkl
+
+      - name: Save models to BentoML store
+        working-directory: ./src
+        run: |
+          python save_model.py
+
+      - name: Build BentoML Service
+        run: bentoml build
+
+      - name: Test
+        run: echo "Unit testing is currently empty"
+
+      - name: Deploy to cloud service
+        run: echo "Deployment step is currently empty"</code></pre>
+  </section>
+
+  <section>
+    <h2>Summary</h2>
+    <p>This project addresses the challenge of noisy, volatile cryptocurrency data through a combination of statistical transformations, exploratory visualization, classical anomaly detection techniques, and scalable machine learning models. The entire pipeline from data preprocessing, model training, to real-time serving and deployment automation is implemented for effective anomaly detection in crypto market data.</p>
+  </section>
+</body>
+</html>
